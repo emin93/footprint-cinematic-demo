@@ -3,42 +3,20 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Trace: A Digital Footprint Demo</title>
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <title>OMEN // Kaleidoscope</title>
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
-  <main class="app">
-    <section class="panel" id="intro">
-      <h1>TRACE</h1>
-      <p class="sub">A cinematic demo about digital footprint awareness.</p>
-      <label>First name (for narration vibe)
-        <input id="name" placeholder="Alex" maxlength="24" />
-      </label>
-      <label>Approximate location (city)
-        <input id="city" placeholder="Berlin" maxlength="48" />
-      </label>
-      <label>Optional: your own photo (for a consent-based eerie effect)
-        <input id="photo" type="file" accept="image/*" />
-      </label>
-      <button id="start">Start sequence</button>
-      <p class="note">This demo uses only what you type. It does not find real addresses or stalk anyone.</p>
-    </section>
+  <canvas id="k"></canvas>
 
-    <section id="cinema" class="hidden">
-      <div id="map"></div>
-      <div class="overlay vignette"></div>
-      <div class="overlay scan"></div>
-      <div class="overlay glitch" id="glitch"></div>
-      <img id="face" class="hidden" alt="consented user portrait" />
-      <div class="hud">
-        <p id="line">Initializing…</p>
-      </div>
-      <button id="restart" class="ghost">Restart</button>
-    </section>
-  </main>
+  <div class="ui" id="ui">
+    <h1>OMEN</h1>
+    <p>A controlled sensory escalation demo.</p>
+    <button id="start">Start sequence</button>
+    <p class="small">Audio from your note ending is used as the loop source.</p>
+  </div>
 
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <div class="overlay"></div>
   <script src="script.js"></script>
 </body>
 </html>

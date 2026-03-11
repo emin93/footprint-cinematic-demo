@@ -1,89 +1,134 @@
-const intro = document.getElementById('intro');
-const cinema = document.getElementById('cinema');
-const line = document.getElementById('line');
-const start = document.getElementById('start');
-const restart = document.getElementById('restart');
-const nameInput = document.getElementById('name');
-const cityInput = document.getElementById('city');
-const photoInput = document.getElementById('photo');
-const face = document.getElementById('face');
-const glitch = document.getElementById('glitch');
+const c = document.getElementById('k');
+const ctx = c.getContext('2d');
+const ui = document.getElementById('ui');
+const startBtn = document.getElementById('start');
 
-let map;
-let audioCtx;
+let w = c.width = innerWidth;
+let h = c.height = innerHeight;
+addEventListener('resize', () => { w = c.width = innerWidth; h = c.height = innerHeight; });
 
-async function geocodeCity(city){
-  const q = encodeURIComponent(city || 'Earth');
-  const r = await fetch(`https://nominatim.openstreetmap.org/search?format=json&limit=1&q=${q}`);
-  const j = await r.json();
-  if (!j?.length) return [40.4168,-3.7038];
-  return [Number(j[0].lat), Number(j[0].lon)];
+let t = 0;
+let running = false;
+let startAt = 0;
+let audioCtx, src, gain, filter, shaper;
+
+function clamp(v, a, b){ return Math.max(a, Math.min(b, v)); }
+function easeInExpo(x){ return x === 0 ? 0 : Math.pow(2, 10 * x - 10); }
+
+function makeDistortion(amount=80){
+  const n = 44100;
+  const curve = new Float32Array(n);
+  const deg = Math.PI / 180;
+  for(let i=0;i<n;i++){
+    const x = (i*2)/n - 1;
+    curve[i] = ((3+amount)*x*20*deg) / (Math.PI + amount*Math.abs(x));
+  }
+  return curve;
 }
 
-function nearby([lat,lon], km=4){
-  const dLat = (Math.random()-0.5) * (km/111);
-  const dLon = (Math.random()-0.5) * (km/(111*Math.cos(lat*Math.PI/180)));
-  return [lat+dLat, lon+dLon];
+async function setupAudio(){
+  audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  const res = await fetch('assets/sfx.wav');
+  const arr = await res.arrayBuffer();
+  const buf = await audioCtx.decodeAudioData(arr);
+
+  src = audioCtx.createBufferSource();
+  src.buffer = buf;
+  src.loop = true;
+
+  gain = audioCtx.createGain();
+  gain.gain.value = 0.02;
+
+  filter = audioCtx.createBiquadFilter();
+  filter.type = 'bandpass';
+  filter.frequency.value = 420;
+  filter.Q.value = 0.7;
+
+  shaper = audioCtx.createWaveShaper();
+  shaper.curve = makeDistortion(30);
+  shaper.oversample = '4x';
+
+  src.connect(filter);
+  filter.connect(shaper);
+  shaper.connect(gain);
+  gain.connect(audioCtx.destination);
+
+  src.start();
 }
 
-function tone(freq=90, dur=0.4, gain=0.02){
-  if(!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-  const osc = audioCtx.createOscillator();
-  const g = audioCtx.createGain();
-  osc.frequency.value = freq;
-  osc.type = 'sawtooth';
-  g.gain.value = gain;
-  osc.connect(g); g.connect(audioCtx.destination);
-  osc.start();
-  g.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + dur);
-  osc.stop(audioCtx.currentTime + dur);
+function draw(progress){
+  const p = clamp(progress, 0, 1);
+  const e = easeInExpo(p);
+
+  const speed = 0.001 + e * 0.04;
+  const petals = 6 + Math.floor(e * 18);
+  const jitter = e * 28;
+  const chaos = e * 0.08;
+
+  t += speed * 16;
+
+  ctx.fillStyle = `rgba(0,0,0,${0.15 + e*0.35})`;
+  ctx.fillRect(0,0,w,h);
+
+  ctx.save();
+  ctx.translate(w/2, h/2);
+
+  for(let i=0;i<petals;i++){
+    ctx.save();
+    const a = (Math.PI*2/petals)*i + t*0.2;
+    ctx.rotate(a);
+
+    for(let r=0;r<Math.min(w,h)*0.7;r+=10){
+      const n = Math.sin(r*0.04 + t*6 + i*0.7);
+      const x = r + n*14 + (Math.random()-0.5)*jitter;
+      const y = Math.sin(r*0.02 + t*8)*30 + (Math.random()-0.5)*jitter;
+
+      const hue = (r*0.25 + t*220 + i*15) % 360;
+      const sat = 70 + e*30;
+      const light = 35 + 30*Math.sin(t*3 + r*0.01);
+      ctx.fillStyle = `hsla(${hue}, ${sat}%, ${light}%, ${0.08 + e*0.32})`;
+
+      const size = 6 + 12*Math.abs(Math.sin(t*2 + r*0.03)) + e*18;
+      ctx.beginPath();
+      ctx.ellipse(x*(1+chaos), y*(1+chaos), size, size*(0.5+Math.abs(n)), a+t, 0, Math.PI*2);
+      ctx.fill();
+    }
+    ctx.restore();
+  }
+  ctx.restore();
+
+  if (e > 0.92){
+    ctx.fillStyle = `rgba(255,255,255,${(e-0.92)*3.2})`;
+    ctx.fillRect(0,0,w,h);
+  }
 }
 
-function glitchPulse(){
-  glitch.style.transform = 'translateX(100%)';
-  setTimeout(()=>{ glitch.style.transform = 'translateX(-100%)'; }, 120);
-}
+function tick(now){
+  if(!running) return;
+  const progress = (now - startAt) / 28000; // 28 sec build-up
 
-async function run(){
-  const name = (nameInput.value || 'You').trim();
-  const city = (cityInput.value || 'your city').trim();
-  intro.classList.add('hidden');
-  cinema.classList.remove('hidden');
-
-  const file = photoInput?.files?.[0];
-  if(file){
-    face.src = URL.createObjectURL(file);
-    face.classList.remove('hidden');
+  if (audioCtx && src){
+    const e = easeInExpo(clamp(progress,0,1));
+    src.playbackRate.value = 0.55 + e*2.6;
+    gain.gain.value = 0.015 + e*0.12;
+    filter.frequency.value = 260 + e*3200;
+    filter.Q.value = 0.7 + e*9;
+    shaper.curve = makeDistortion(20 + e*520);
   }
 
-  const base = await geocodeCity(city);
-  map = L.map('map', { zoomControl:false, attributionControl:false }).setView(base, 3);
-  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom:19 }).addTo(map);
+  draw(progress);
 
-  const steps = [
-    `Collecting open signals for ${name}…`,
-    `Cross-referencing profiles near ${city}…`,
-    `Inferring probable daily radius…`,
-    `No exact address. Only approximation available.`,
-    `Projecting high-probability presence zones…`,
-    `Zooming into likely area…`,
-    `Reminder: this is why privacy settings matter.`
-  ];
-
-  for (let i=0;i<steps.length;i++){
-    line.textContent = steps[i];
-    tone(80 + i*20, 0.35, 0.018);
-    glitchPulse();
-    if(i===1) map.flyTo(base, 8, {duration:2});
-    if(i===2) map.flyTo(nearby(base,12), 11, {duration:2});
-    if(i===4) map.flyTo(nearby(base,6), 13, {duration:2});
-    if(i===5) map.flyTo(nearby(base,2.5), 15, {duration:2});
-    await new Promise(r=>setTimeout(r, 2100));
+  if(progress >= 1.05){
+    running = false;
+    return;
   }
-
-  L.circle(nearby(base,2), { radius: 800, color:'#6ee7ff', fillOpacity:.08 }).addTo(map);
-  line.textContent = 'Protect yourself: limit public data, use aliases, enable 2FA, and review data broker exposure.';
+  requestAnimationFrame(tick);
 }
 
-start.addEventListener('click', ()=>{ run().catch(err=>{ line.textContent='Error: '+err.message; }); });
-restart.addEventListener('click', ()=>{ location.reload(); });
+startBtn.addEventListener('click', async () => {
+  ui.classList.add('hidden');
+  await setupAudio();
+  running = true;
+  startAt = performance.now();
+  requestAnimationFrame(tick);
+});
