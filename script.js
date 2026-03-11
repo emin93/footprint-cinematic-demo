@@ -11,6 +11,18 @@ let t = 0;
 let running = false;
 let startAt = 0;
 let audioCtx, src, gain, filter, shaper;
+let fxGain, fxFilter;
+let mantraTimer;
+
+const mantras = [
+  'Amen.',
+  'Relax.',
+  'Breathe in. Breathe out.',
+  'You are safe.',
+  'AI will not take over the world.',
+  'Peace in. Fear out.',
+  'Amen. Relax.',
+];
 
 function clamp(v, a, b){ return Math.max(a, Math.min(b, v)); }
 function easeInExpo(x){ return x === 0 ? 0 : Math.pow(2, 10 * x - 10); }
@@ -53,21 +65,83 @@ async function setupAudio(){
   shaper.connect(gain);
   gain.connect(audioCtx.destination);
 
+  // extra oscillator layer, intentionally quieter than voice mantra
+  fxGain = audioCtx.createGain();
+  fxGain.gain.value = 0.004;
+  fxFilter = audioCtx.createBiquadFilter();
+  fxFilter.type = 'highpass';
+  fxFilter.frequency.value = 140;
+  fxFilter.Q.value = 0.9;
+  fxFilter.connect(fxGain);
+  fxGain.connect(audioCtx.destination);
+
   src.start();
+}
+
+function speakMantra(progress){
+  const synth = window.speechSynthesis;
+  if(!synth) return;
+  const e = easeInExpo(clamp(progress, 0, 1));
+  const phrase = mantras[Math.floor(Math.random()*mantras.length)];
+
+  const u = new SpeechSynthesisUtterance(phrase);
+  u.rate = 0.72 + e*1.55;
+  u.pitch = 0.85 + e*0.65;
+  u.volume = 1.0;
+  // use available voice automatically; mantra should stay foreground
+  synth.cancel();
+  synth.speak(u);
+}
+
+function scheduleMantras(){
+  const loop = () => {
+    if(!running) return;
+    const progress = (performance.now() - startAt) / 28000;
+    speakMantra(progress);
+
+    const e = easeInExpo(clamp(progress, 0, 1));
+    const nextMs = Math.max(280, 2300 - e*1950);
+    mantraTimer = setTimeout(loop, nextMs);
+  };
+  loop();
+}
+
+function funkyPing(progress){
+  if(!audioCtx || !fxFilter || !fxGain) return;
+  const e = easeInExpo(clamp(progress, 0, 1));
+  const o = audioCtx.createOscillator();
+  const g = audioCtx.createGain();
+
+  const f = 120 + Math.random()*280 + e*1200;
+  o.frequency.value = f;
+  o.type = Math.random() > 0.5 ? 'triangle' : 'sawtooth';
+  g.gain.value = 0.001 + e*0.016; // still quieter than mantra voice
+
+  o.connect(fxFilter);
+  fxFilter.connect(g);
+  g.connect(audioCtx.destination);
+
+  const dur = 0.03 + (1-e)*0.08;
+  o.start();
+  g.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + dur);
+  o.stop(audioCtx.currentTime + dur);
+
+  fxFilter.frequency.value = 120 + e*4800;
+  fxFilter.Q.value = 0.8 + e*6;
 }
 
 function draw(progress){
   const p = clamp(progress, 0, 1);
   const e = easeInExpo(p);
 
-  const speed = 0.001 + e * 0.04;
-  const petals = 6 + Math.floor(e * 18);
-  const jitter = e * 28;
-  const chaos = e * 0.08;
+  const speed = 0.001 + e * 0.05;
+  const petals = 6 + Math.floor(e * 20);
+  const jitter = e * 34;
+  const chaos = e * 0.12;
 
   t += speed * 16;
 
-  ctx.fillStyle = `rgba(0,0,0,${0.15 + e*0.35})`;
+  ctx.fillStyle = `rgba(0,0,0,${0.15 + e*0.45})`;
   ctx.fillRect(0,0,w,h);
 
   ctx.save();
@@ -75,51 +149,54 @@ function draw(progress){
 
   for(let i=0;i<petals;i++){
     ctx.save();
-    const a = (Math.PI*2/petals)*i + t*0.2;
+    const a = (Math.PI*2/petals)*i + t*0.22;
     ctx.rotate(a);
 
-    for(let r=0;r<Math.min(w,h)*0.7;r+=10){
-      const n = Math.sin(r*0.04 + t*6 + i*0.7);
-      const x = r + n*14 + (Math.random()-0.5)*jitter;
-      const y = Math.sin(r*0.02 + t*8)*30 + (Math.random()-0.5)*jitter;
+    for(let r=0;r<Math.min(w,h)*0.75;r+=9){
+      const n = Math.sin(r*0.045 + t*7 + i*0.8);
+      const x = r + n*16 + (Math.random()-0.5)*jitter;
+      const y = Math.sin(r*0.025 + t*9)*36 + (Math.random()-0.5)*jitter;
 
-      const hue = (r*0.25 + t*220 + i*15) % 360;
-      const sat = 70 + e*30;
-      const light = 35 + 30*Math.sin(t*3 + r*0.01);
-      ctx.fillStyle = `hsla(${hue}, ${sat}%, ${light}%, ${0.08 + e*0.32})`;
+      const hue = (r*0.3 + t*260 + i*18) % 360;
+      const sat = 72 + e*28;
+      const light = 30 + 38*Math.sin(t*3.4 + r*0.012);
+      ctx.fillStyle = `hsla(${hue}, ${sat}%, ${light}%, ${0.08 + e*0.36})`;
 
-      const size = 6 + 12*Math.abs(Math.sin(t*2 + r*0.03)) + e*18;
+      const size = 5 + 14*Math.abs(Math.sin(t*2.4 + r*0.034)) + e*22;
       ctx.beginPath();
-      ctx.ellipse(x*(1+chaos), y*(1+chaos), size, size*(0.5+Math.abs(n)), a+t, 0, Math.PI*2);
+      ctx.ellipse(x*(1+chaos), y*(1+chaos), size, size*(0.48+Math.abs(n)), a+t, 0, Math.PI*2);
       ctx.fill();
     }
     ctx.restore();
   }
   ctx.restore();
 
-  if (e > 0.92){
-    ctx.fillStyle = `rgba(255,255,255,${(e-0.92)*3.2})`;
+  if (e > 0.9){
+    ctx.fillStyle = `rgba(255,255,255,${(e-0.9)*3.8})`;
     ctx.fillRect(0,0,w,h);
   }
 }
 
 function tick(now){
   if(!running) return;
-  const progress = (now - startAt) / 28000; // 28 sec build-up
+  const progress = (now - startAt) / 28000;
 
   if (audioCtx && src){
     const e = easeInExpo(clamp(progress,0,1));
-    src.playbackRate.value = 0.55 + e*2.6;
+    src.playbackRate.value = 0.5 + e*2.9;
     gain.gain.value = 0.015 + e*0.12;
-    filter.frequency.value = 260 + e*3200;
-    filter.Q.value = 0.7 + e*9;
-    shaper.curve = makeDistortion(20 + e*520);
+    filter.frequency.value = 240 + e*3600;
+    filter.Q.value = 0.7 + e*11;
+    shaper.curve = makeDistortion(24 + e*620);
+
+    if (Math.random() < (0.08 + e*0.24)) funkyPing(progress);
   }
 
   draw(progress);
 
-  if(progress >= 1.05){
+  if(progress >= 1.07){
     running = false;
+    if (mantraTimer) clearTimeout(mantraTimer);
     return;
   }
   requestAnimationFrame(tick);
@@ -130,5 +207,6 @@ startBtn.addEventListener('click', async () => {
   await setupAudio();
   running = true;
   startAt = performance.now();
+  scheduleMantras();
   requestAnimationFrame(tick);
 });
