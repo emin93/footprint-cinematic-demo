@@ -10,8 +10,11 @@ button{margin-top:16px;padding:11px 16px;border:1px solid #3ad;background:#123a4
 #cinema{position:fixed;inset:0}
 #map{position:absolute;inset:0;filter:grayscale(0.25) contrast(1.1) brightness(0.8)}
 .overlay{position:absolute;inset:0;pointer-events:none}
-.vignette{background:radial-gradient(circle at center, transparent 35%, rgba(0,0,0,.6) 100%)}
-.scan{background:repeating-linear-gradient(180deg, rgba(130,255,255,.03) 0 2px, transparent 2px 4px)}
+.vignette{background:radial-gradient(circle at center, transparent 35%, rgba(0,0,0,.72) 100%)}
+.scan{background:repeating-linear-gradient(180deg, rgba(130,255,255,.03) 0 2px, transparent 2px 4px);animation:flicker 0.12s infinite}
+.glitch{mix-blend-mode:screen;opacity:.15;background:linear-gradient(90deg,rgba(255,0,0,.18),transparent 30%,rgba(0,255,255,.18) 70%,transparent);transform:translateX(-100%)}
 .hud{position:absolute;left:50%;transform:translateX(-50%);bottom:28px;background:rgba(2,8,18,.72);border:1px solid #2d4455;padding:10px 14px;border-radius:10px;min-width:min(820px,92vw)}
 #line{margin:0;font-size:14px;letter-spacing:.8px;color:#c8f7ff}
+#face{position:absolute;top:18px;left:18px;width:140px;height:140px;object-fit:cover;border-radius:8px;border:1px solid #3a4a66;filter:grayscale(1) contrast(1.15) brightness(.8);box-shadow:0 0 25px rgba(110,231,255,.15)}
 .ghost{position:absolute;top:14px;right:14px;background:#0c1530;border-color:#345}
+@keyframes flicker{0%{opacity:.9}50%{opacity:.7}100%{opacity:.92}}

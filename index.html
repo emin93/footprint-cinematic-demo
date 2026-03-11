@@ -18,6 +18,9 @@
       <label>Approximate location (city)
         <input id="city" placeholder="Berlin" maxlength="48" />
       </label>
+      <label>Optional: your own photo (for a consent-based eerie effect)
+        <input id="photo" type="file" accept="image/*" />
+      </label>
       <button id="start">Start sequence</button>
       <p class="note">This demo uses only what you type. It does not find real addresses or stalk anyone.</p>
     </section>
@@ -26,6 +29,8 @@
       <div id="map"></div>
       <div class="overlay vignette"></div>
       <div class="overlay scan"></div>
+      <div class="overlay glitch" id="glitch"></div>
+      <img id="face" class="hidden" alt="consented user portrait" />
       <div class="hud">
         <p id="line">Initializing…</p>
       </div>
