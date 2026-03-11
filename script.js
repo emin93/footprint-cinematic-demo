@@ -13,6 +13,8 @@ let startAt = 0;
 let audioCtx, src, gain, filter, shaper;
 let fxGain, fxFilter;
 let mantraTimer;
+let mantraSpeaking = false;
+const finale = document.getElementById('finale');
 
 const mantras = [
   'Amen.',
@@ -21,7 +23,7 @@ const mantras = [
   'You are safe.',
   'AI will not take over the world.',
   'Peace in. Fear out.',
-  'Amen. Relax.',
+  'Amen. Relax. AI will not take over the world.',
 ];
 
 function clamp(v, a, b){ return Math.max(a, Math.min(b, v)); }
@@ -49,7 +51,7 @@ async function setupAudio(){
   src.loop = true;
 
   gain = audioCtx.createGain();
-  gain.gain.value = 0.02;
+  gain.gain.value = 0.06;
 
   filter = audioCtx.createBiquadFilter();
   filter.type = 'bandpass';
@@ -80,16 +82,17 @@ async function setupAudio(){
 
 function speakMantra(progress){
   const synth = window.speechSynthesis;
-  if(!synth) return;
+  if(!synth || mantraSpeaking) return;
   const e = easeInExpo(clamp(progress, 0, 1));
   const phrase = mantras[Math.floor(Math.random()*mantras.length)];
 
   const u = new SpeechSynthesisUtterance(phrase);
-  u.rate = 0.72 + e*1.55;
-  u.pitch = 0.85 + e*0.65;
-  u.volume = 1.0;
-  // use available voice automatically; mantra should stay foreground
-  synth.cancel();
+  u.rate = 0.68 + e*1.35;
+  u.pitch = 0.85 + e*0.55;
+  u.volume = 0.72;
+  mantraSpeaking = true;
+  u.onend = () => { mantraSpeaking = false; };
+  u.onerror = () => { mantraSpeaking = false; };
   synth.speak(u);
 }
 
@@ -100,7 +103,7 @@ function scheduleMantras(){
     speakMantra(progress);
 
     const e = easeInExpo(clamp(progress, 0, 1));
-    const nextMs = Math.max(280, 2300 - e*1950);
+    const nextMs = Math.max(420, 2300 - e*1750);
     mantraTimer = setTimeout(loop, nextMs);
   };
   loop();
@@ -115,7 +118,7 @@ function funkyPing(progress){
   const f = 120 + Math.random()*280 + e*1200;
   o.frequency.value = f;
   o.type = Math.random() > 0.5 ? 'triangle' : 'sawtooth';
-  g.gain.value = 0.001 + e*0.016; // still quieter than mantra voice
+  g.gain.value = 0.0008 + e*0.01; // quieter than mantra + voice loop
 
   o.connect(fxFilter);
   fxFilter.connect(g);
@@ -184,7 +187,7 @@ function tick(now){
   if (audioCtx && src){
     const e = easeInExpo(clamp(progress,0,1));
     src.playbackRate.value = 0.5 + e*2.9;
-    gain.gain.value = 0.015 + e*0.12;
+    gain.gain.value = 0.06 + e*0.2;
     filter.frequency.value = 240 + e*3600;
     filter.Q.value = 0.7 + e*11;
     shaper.curve = makeDistortion(24 + e*620);
@@ -197,6 +200,10 @@ function tick(now){
   if(progress >= 1.07){
     running = false;
     if (mantraTimer) clearTimeout(mantraTimer);
+    if (finale) {
+      finale.classList.remove('hidden');
+      finale.classList.add('show');
+    }
     return;
   }
   requestAnimationFrame(tick);
@@ -204,6 +211,11 @@ function tick(now){
 
 startBtn.addEventListener('click', async () => {
   ui.classList.add('hidden');
+  if (finale) {
+    finale.onerror = () => finale.classList.add('hidden');
+    finale.classList.remove('show');
+    finale.classList.add('hidden');
+  }
   await setupAudio();
   running = true;
   startAt = performance.now();

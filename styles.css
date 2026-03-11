@@ -18,3 +18,33 @@ html, body { margin:0; height:100%; background:#000; overflow:hidden; font-famil
 .small{font-size:12px; opacity:.6}
 button{padding:10px 16px; border-radius:10px; border:1px solid #5ae0ff; background:#0d3b4a; color:#dff; cursor:pointer}
 .hidden{display:none}
+.finale{
+  position:fixed;
+  inset:0;
+  width:100vw;
+  height:100vh;
+  object-fit:cover;
+  opacity:0;
+  pointer-events:none;
+  mix-blend-mode:screen;
+  filter:contrast(1.5) saturate(1.4) brightness(0.55) hue-rotate(0deg);
+}
+.finale.show{
+  display:block;
+  opacity:.95;
+  animation:finaleJitter .12s infinite, finaleColor 1.4s infinite alternate;
+}
+
+@keyframes finaleJitter{
+  0%{transform:translate(0,0) scale(1)}
+  20%{transform:translate(-8px,4px) scale(1.03)}
+  40%{transform:translate(10px,-6px) scale(0.99)}
+  60%{transform:translate(-4px,-10px) scale(1.05)}
+  80%{transform:translate(6px,8px) scale(1.01)}
+  100%{transform:translate(0,0) scale(1)}
+}
+
+@keyframes finaleColor{
+  0%{filter:contrast(1.4) saturate(1.2) brightness(.5) hue-rotate(0deg) blur(0px)}
+  100%{filter:contrast(2) saturate(1.8) brightness(.7) hue-rotate(65deg) blur(1.2px)}
+}
