@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Trace: A Digital Footprint Demo</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <main class="app">
+    <section class="panel" id="intro">
+      <h1>TRACE</h1>
+      <p class="sub">A cinematic demo about digital footprint awareness.</p>
+      <label>First name (for narration vibe)
+        <input id="name" placeholder="Alex" maxlength="24" />
+      </label>
+      <label>Approximate location (city)
+        <input id="city" placeholder="Berlin" maxlength="48" />
+      </label>
+      <button id="start">Start sequence</button>
+      <p class="note">This demo uses only what you type. It does not find real addresses or stalk anyone.</p>
+    </section>
+
+    <section id="cinema" class="hidden">
+      <div id="map"></div>
+      <div class="overlay vignette"></div>
+      <div class="overlay scan"></div>
+      <div class="hud">
+        <p id="line">Initializing…</p>
+      </div>
+      <button id="restart" class="ghost">Restart</button>
+    </section>
+  </main>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="script.js"></script>
+</body>
+</html>
